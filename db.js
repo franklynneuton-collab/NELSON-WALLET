@@ -83,6 +83,7 @@ function migrate() {
       id TEXT PRIMARY KEY,
       buyer_id TEXT NOT NULL REFERENCES users(id),
       status TEXT NOT NULL DEFAULT 'processing', -- processing | shipped | delivered | cancelled
+      escrow_status TEXT NOT NULL DEFAULT 'held', -- held | released | refunded
       total_cents INTEGER NOT NULL,
       currency TEXT NOT NULL DEFAULT 'USD',
       ledger_transaction_id TEXT REFERENCES ledger_transactions(id),
@@ -122,6 +123,12 @@ function migrate() {
       created_at TEXT NOT NULL DEFAULT (datetime('now'))
     );
   `);
+
+  // Backfill for databases created before escrow_status existed.
+  const cols = db.prepare(`PRAGMA table_info(orders)`).all();
+  if (!cols.some((c) => c.name === 'escrow_status')) {
+    db.exec(`ALTER TABLE orders ADD COLUMN escrow_status TEXT NOT NULL DEFAULT 'held'`);
+  }
 }
 
 module.exports = { db, migrate };

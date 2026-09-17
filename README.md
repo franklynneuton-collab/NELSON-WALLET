@@ -27,9 +27,14 @@ npm test         # 16 tests, all passing: auth, ledger, checkout
   Idempotency keys prevent double-processing (e.g. a retried request).
   Insufficient-funds and invalid-amount checks throw before anything is
   written — verified by test (`ledger.test.js`).
-- **Checkout** — validates stock, checks currency consistency, charges the
-  buyer, pays each seller, decrements stock — all in one atomic transaction.
-  A failed checkout leaves balances and stock completely untouched (tested).
+- **Checkout & escrow** — validates stock, checks currency consistency,
+  charges the buyer into a platform escrow account. Sellers are **not**
+  paid at checkout. A seller marks an order `shipped`; only the **buyer**
+  confirms `delivered`, which atomically releases escrow to each seller on
+  that order. If the buyer cancels while an order is still `processing`,
+  escrow refunds to the buyer and stock is restored. Double-release and
+  double-refund are both blocked (idempotency keys + an `escrow_status`
+  guard on the order) — verified by test (`orders.test.js`).
 - **KYC gating** — sending money, adding money, exchanging, and checkout all
   require `kyc_status = 'verified'` on the account (403 `kyc_required`
   otherwise).
@@ -59,9 +64,8 @@ client-reported "payment succeeded."
   frontend prototype has UI shells for these; this backend has no endpoints
   for them yet. Need to decide: wire to a real model (e.g. via your OmniAI
   platform) or scope out of v1.
-- **Escrow** — checkout currently pays sellers immediately on order
-  placement. A real marketplace usually escrows funds until delivery
-  confirmation — worth adding before real transaction volume.
+- **Escrow** — implemented (see above): checkout holds funds, delivery
+  confirmation releases them, cancellation refunds them.
 - **FX rates** — `/wallet/exchange` uses a placeholder 1:1 rate. Needs a
   real rate provider before launch.
 - **Frontend wiring** — nothing in the uploaded HTML prototype calls this
@@ -88,7 +92,7 @@ GET  /products                 GET  /products/mine        GET /products/:id
 POST /products                 PATCH /products/:id        DELETE /products/:id
 
 GET  /orders                   GET  /orders/:id           POST /orders
-PATCH /orders/:id/status
+GET  /orders/selling           PATCH /orders/:id/status  (delivered: buyer only, shipped: seller only, cancelled: buyer only)
 
 GET  /notifications            POST /notifications/:id/read
 POST /notifications/read-all

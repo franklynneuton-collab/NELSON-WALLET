@@ -44,6 +44,7 @@ const productSchema = z.object({
   lowStockAt: z.number().int().min(0).default(0),
   tags: z.string().max(300).optional(),
   sku: z.string().max(60).optional(),
+  status: z.enum(['draft', 'live', 'paused', 'sold_out', 'removed']).optional(),
 });
 
 const orderSchema = z.object({

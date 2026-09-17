@@ -57,13 +57,13 @@ router.patch('/:id', requireAuth, (req, res, next) => {
     db.prepare(`
       UPDATE products SET name=@name, description=@description, price_cents=@price_cents,
         currency=@currency, stock=@stock, low_stock_at=@low_stock_at, tags=@tags, sku=@sku,
-        updated_at = datetime('now')
+        status=@status, updated_at = datetime('now')
       WHERE id=@id
     `).run({
       id: req.params.id, name: merged.name, description: merged.description,
       price_cents: merged.priceCents ?? merged.price_cents, currency: merged.currency,
       stock: merged.stock, low_stock_at: merged.lowStockAt ?? merged.low_stock_at,
-      tags: merged.tags, sku: merged.sku,
+      tags: merged.tags, sku: merged.sku, status: merged.status,
     });
     res.json({ product: db.prepare('SELECT * FROM products WHERE id = ?').get(req.params.id) });
   } catch (err) { next(err); }
